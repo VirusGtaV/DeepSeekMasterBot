@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 # --- ТВОИ КЛЮЧИ (сразу вставлены) ---
 BOT_TOKEN = "8475855320:AAERPPB2INBiymqDt0JJjhhnKP6A3Fg-mLI"
-DEEPSEEK_API_KEY = "sk-7pda69awAqETSnjmmsoc03LRLZNqqTYcUpRLg4Kbo2wKgjDv"  # потом заменишь на новый
+DEEPSEEK_API_KEY = "sk-637bc4ba064c46ec93ace9cbadd2af24"  # потом заменишь на новый
 
 # --- Клиент DeepSeek ---
 client = OpenAI(
@@ -49,6 +49,4 @@ def main():
     app.run_polling()
 
 if __name__ == "__main__":
-
     main()
-
