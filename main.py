@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 # --- Твои ключи (вставлены напрямую) ---
 BOT_TOKEN = "8475855320:AAERPPB2INBiymqDt0JJjhhnKP6A3Fg-mLI"
-DEEPSEEK_API_KEY = "sk-a395259d4fb64376b9e9c606b39c49cc"
+DEEPSEEK_API_KEY = "sk-35249f5f91174365b7de113e1ec70516"
 
 # --- Клиент DeepSeek ---
 client = OpenAI(
