@@ -1,24 +1,19 @@
-# ============================== ИМПОРТЫ ==============================
 import logging
 import asyncio
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 from g4f.client import Client
 
-# ============================== НАСТРОЙКИ ==============================
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# ⚠️ ТОКЕН ОТ BOTFATHER
 BOT_TOKEN = "8475855320:AAERPPB2INBiymqDt0JJjhhnKP6A3Fg-mLI"
-
-# ============================== КЛИЕНТ G4F ==============================
 client = Client()
 MODEL_NAME = "gpt-4o-mini"
 
 async def query_ai(user_message: str) -> str:
-    """Запрос к AI через g4f (асинхронный метод create)"""
     try:
+        # Правильный асинхронный вызов (без async_create)
         response = await client.chat.completions.create(
             model=MODEL_NAME,
             messages=[{"role": "user", "content": user_message}],
@@ -28,7 +23,7 @@ async def query_ai(user_message: str) -> str:
         return response.choices[0].message.content
     except Exception as e:
         logger.error(f"Ошибка G4F: {e}")
-        return "❌ Ошибка при обращении к AI. Попробуйте позже."
+        return "❌ Ошибка. Попробуйте позже."
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -39,14 +34,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.chat.send_action(action="typing")
     reply = await query_ai(update.message.text)
-
     MAX_LENGTH = 4096
-    keyboard = [
-        [InlineKeyboardButton("🔄 Новый диалог", callback_data="new_chat")],
-        [InlineKeyboardButton("❓ Помощь", callback_data="help")]
-    ]
+    keyboard = [[InlineKeyboardButton("🔄 Новый диалог", callback_data="new_chat")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-
     if len(reply) > MAX_LENGTH:
         for i in range(0, len(reply), MAX_LENGTH):
             await update.message.reply_text(reply[i:i+MAX_LENGTH])
@@ -59,13 +49,10 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     if query.data == "new_chat":
         await context.bot.send_message(chat_id=query.message.chat_id, text="🔄 Новый диалог начат!")
-    elif query.data == "help":
-        help_text = "📚 Просто отправляй сообщения, я отвечу."
-        await context.bot.send_message(chat_id=query.message.chat_id, text=help_text)
 
 def main():
     if not BOT_TOKEN:
-        logger.error("Нет BOT_TOKEN")
+        logger.error("Нет токена")
         return
     app = Application.builder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
