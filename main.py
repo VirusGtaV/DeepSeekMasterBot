@@ -3,83 +3,83 @@ import logging
 import asyncio
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
-from openai import OpenAI
+import g4f
+from g4f.client import Client
 
 # ============================== НАСТРОЙКИ ==============================
+# Включаем подробное логирование, чтобы видеть все процессы
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# ⚠️ ТВОИ ДАННЫЕ (ВСТАВЬ СВОИ ЗНАЧЕНИЯ)
-BOT_TOKEN = "8475855320:AAERPPB2INBiymqDt0JJjhhnKP6A3Fg-mLI"          # Токен от BotFather
-GITHUB_TOKEN = "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 "  # Твой токен GitHub
+# ⚠️ ВАШ ТОКЕН ОТ BOTFATHER (вставьте сюда)
+BOT_TOKEN = "8475855320:AAERPPB2INBiymqDt0JJjhhnKP6A3Fg-mLI"
 
-# ============================== КЛИЕНТ GITHUB MODELS ==============================
-client = OpenAI(
-    base_url="https://models.github.ai/inference",
-    api_key=GITHUB_TOKEN,
-)
+# ============================== КЛИЕНТ G4F ==============================
+# Создаём клиента G4F. Никаких ключей не нужно!
+# Если какой-то провайдер временно не работает, клиент автоматически попробует другие [citation:9].
+client = Client()
 
-# ============================== ВЫБОР МОДЕЛИ ==============================
-# Доступные модели: openai/gpt-4.1, meta/llama-4-maverick, xai/grok-4, deepseek/deepseek-v3 и др.
-MODEL_NAME = "openai/gpt-4.1"  # Можно заменить на другую модель
+# Модель, которую будем использовать. Можно выбрать любую из поддерживаемых.
+# "gpt-4o-mini" — хороший баланс скорости и качества.
+MODEL_NAME = "gpt-4o-mini"
 
+# ============================== ФУНКЦИЯ ЗАПРОСА К AI ==============================
 async def query_ai(user_message: str) -> str:
-    """Отправляет запрос к GitHub Models и возвращает ответ."""
+    """
+    Отправляет запрос к AI через g4f и возвращает ответ.
+    Используется асинхронный метод для неблокирующей работы [citation:2].
+    """
     try:
-        loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(
-            None,
-            lambda: client.chat.completions.create(
-                model=MODEL_NAME,
-                messages=[{"role": "user", "content": user_message}],
-                temperature=0.7,
-                max_tokens=4000  # Учитываем лимит вывода
-            )
+        # Асинхронный вызов для генерации ответа
+        response = await client.chat.completions.async_create(
+            model=MODEL_NAME,
+            messages=[{"role": "user", "content": user_message}],
+            temperature=0.7,      # Немного креативности
+            timeout=30             # Ждём ответ не больше 30 секунд
         )
         return response.choices[0].message.content
     except Exception as e:
-        logger.error(f"Ошибка GitHub Models: {e}")
-        # Понятные сообщения об ошибках
-        if "401" in str(e):
-            return "❌ Ошибка авторизации: неверный токен GitHub. Проверьте токен и его права."
-        elif "429" in str(e):
-            return "❌ Превышен лимит запросов. Попробуйте позже."
-        elif "model_not_found" in str(e).lower() or "404" in str(e):
-            return f"❌ Модель {MODEL_NAME} временно недоступна. Попробуйте другую модель (например, openai/gpt-4.1)."
-        else:
-            return "❌ Ошибка при обращении к модели. Попробуйте позже."
+        logger.error(f"Ошибка G4F: {e}")
+        return "❌ Ошибка при обращении к AI. Попробуйте позже."
 
 # ============================== ОБРАБОТЧИК КОМАНДЫ /start ==============================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Отправляет приветственное сообщение с информацией о боте."""
     await update.message.reply_text(
-        f"👋 Привет! Я бот на базе **GitHub Models** (модель `{MODEL_NAME}`).\n"
-        "Я использую твой GitHub Personal Access Token для доступа к современным AI-моделям.\n"
-        "Бесплатный лимит: ~150 запросов в день.\n"
+        f"👋 Привет! Я бот на базе **g4f (GPT4Free)**.\n"
+        f"Я использую модель `{MODEL_NAME}` и работаю полностью бесплатно, без ключей.\n"
+        "Библиотека автоматически выбирает работающего провайдера, но стабильность не гарантируется [citation:5].\n"
         "Просто задавай вопросы!"
     )
 
 # ============================== ОБРАБОТЧИК ТЕКСТОВЫХ СООБЩЕНИЙ ==============================
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Получает текст от пользователя, отправляет запрос в AI и возвращает ответ."""
     await update.message.chat.send_action(action="typing")
     reply = await query_ai(update.message.text)
 
     MAX_LENGTH = 4096  # Лимит Telegram на одно сообщение
+
+    # Кнопки для удобства
     keyboard = [
         [InlineKeyboardButton("🔄 Новый диалог", callback_data="new_chat")],
         [InlineKeyboardButton("❓ Помощь", callback_data="help")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
+    # Разбиваем длинный ответ на части, если он превышает лимит Telegram
     if len(reply) > MAX_LENGTH:
-        # Разбиваем длинный ответ на части
         for i in range(0, len(reply), MAX_LENGTH):
-            await update.message.reply_text(reply[i:i+MAX_LENGTH])
+            part = reply[i:i+MAX_LENGTH]
+            await update.message.reply_text(part)
+        # После всех частей отправляем сообщение с кнопками
         await update.message.reply_text("✅ Ответ полностью отправлен. Что дальше?", reply_markup=reply_markup)
     else:
         await update.message.reply_text(reply, reply_markup=reply_markup)
 
 # ============================== ОБРАБОТЧИК НАЖАТИЙ НА КНОПКИ ==============================
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обрабатывает нажатия на инлайн-кнопки."""
     query = update.callback_query
     await query.answer()
     if query.data == "new_chat":
@@ -88,21 +88,17 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         help_text = (
             "📚 **Как пользоваться ботом:**\n"
             "• Просто отправьте сообщение — я отвечу.\n"
-            f"• Используется модель **{MODEL_NAME}**.\n"
+            f"• Используется модель **{MODEL_NAME}** через g4f.\n"
             "• Если ответ длинный, он будет разбит на части.\n"
-            "• Лимиты: ~150 запросов в день, ~15 в минуту.\n"
-            "• Если возникла ошибка, проверьте токен GitHub в коде."
+            "• Библиотека автоматически переключает провайдеров при сбоях [citation:9], но 100% стабильность не гарантируется [citation:5]."
         )
         await context.bot.send_message(chat_id=query.message.chat_id, text=help_text)
 
 # ============================== ТОЧКА ВХОДА ==============================
 def main():
-    # Проверяем, что ключи заданы
+    """Запускает бота."""
     if not BOT_TOKEN:
         logger.error("Ошибка: не задан BOT_TOKEN")
-        return
-    if not GITHUB_TOKEN or GITHUB_TOKEN == "github_pat_...":
-        logger.error("Ошибка: не задан или не изменён GITHUB_TOKEN")
         return
 
     app = Application.builder().token(BOT_TOKEN).build()
@@ -110,9 +106,8 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.add_handler(CallbackQueryHandler(button_callback))
 
-    logger.info(f"Бот с GitHub Models ({MODEL_NAME}) запущен...")
+    logger.info("Бот с g4f запущен...")
     app.run_polling()
 
 if __name__ == "__main__":
     main()
-
