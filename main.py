@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 # ⚠️ ТВОИ ДАННЫЕ (ВСТАВЬ СВОИ ЗНАЧЕНИЯ)
 BOT_TOKEN = "8475855320:AAERPPB2INBiymqDt0JJjhhnKP6A3Fg-mLI"          # Токен от BotFather
-GITHUB_TOKEN = "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"  # Твой токен GitHub
+GITHUB_TOKEN = "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 "  # Твой токен GitHub
 
 # ============================== КЛИЕНТ GITHUB MODELS ==============================
 client = OpenAI(
@@ -115,3 +115,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
