@@ -1,2 +1,2 @@
 python-telegram-bot>=20.0
-g4f>=0.4.0
+puter-python-sdk>=0.5.0
